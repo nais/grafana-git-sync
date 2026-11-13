@@ -1,0 +1,44 @@
+image:
+  repository: europe-north1-docker.pkg.dev/nais-io/nais/images/grafana-git-sync
+  # Set at install time to an image version pushed by CI.
+  tag: ""
+  pullPolicy: IfNotPresent
+
+# How often to reconcile. Grafana itself polls each repository every 60 seconds.
+schedule: "*/10 * * * *"
+
+grafana:
+  # In-cluster Grafana URL, bypassing IAP, e.g. http://grafana.grafana.svc.cluster.local
+  url: ""
+  # Grafana API namespace (org); "default" is org 1.
+  namespace: default
+
+github:
+  appID: ""
+  installationID: ""
+
+# Pre-existing Secret with the Grafana service account token (Admin role) and
+# the GitHub App private key (PEM).
+existingSecret:
+  name: ""
+  grafanaTokenKey: grafana-token
+  githubAppPrivateKeyKey: github-app-private-key
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+
+podAnnotations: {}
+podLabels: {}
+
+resources:
+  requests:
+    cpu: 10m
+    memory: 64Mi
+  limits:
+    memory: 128Mi
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

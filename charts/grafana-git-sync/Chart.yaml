@@ -1,0 +1,9 @@
+apiVersion: v2
+name: grafana-git-sync
+description: Sets up read-only Grafana Git Sync for every repository a GitHub App installation can access
+sources:
+  - https://github.com/nais/grafana-git-sync
+type: application
+# Bump manually when the chart changes; CI pushes it to oci://europe-north1-docker.pkg.dev/nais-io/nais.
+version: 0.1.0
+appVersion: "0.1.0"
