@@ -18,7 +18,7 @@ kubectl create secret generic grafana-git-sync \
   --from-literal=grafana-token="$GRAFANA_TOKEN" \
   --from-file=github-app-private-key=app.private-key.pem
 
-helm upgrade --install grafana-git-sync \
+helm upgrade --install grafana-git-sync --reuse-values \
   oci://europe-north1-docker.pkg.dev/nais-io/nais/grafana-git-sync --version <chart-version> \
   --set image.tag=<image-version> \
   --set grafana.url=http://<grafana-service>.<namespace>.svc.cluster.local \
