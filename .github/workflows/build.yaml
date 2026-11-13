@@ -1,0 +1,63 @@
+name: Build and push image
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - "**/*.md"
+      - "charts/**"
+      - ".github/workflows/chart.yaml"
+  pull_request:
+env:
+  RUNNER_IMG: "gcr.io/distroless/static-debian12:nonroot"
+  BASEIMG_IDENTITY: "keyless@distroless.iam.gserviceaccount.com"
+  BASEIMG_ISSUER: "https://accounts.google.com"
+permissions:
+  contents: "read"
+jobs:
+  checks:
+    strategy:
+      fail-fast: false
+      matrix:
+        mise-task:
+          - check:fmt
+          - check:govet
+          - check:govulncheck
+          - check:helm
+          - check:ratchet
+          - check:staticcheck
+          - test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # ratchet:actions/checkout@v6
+      - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # ratchet:jdx/mise-action@v4.0.1
+      - run: mise run ${{ matrix.mise-task }}
+  build_and_push:
+    if: github.ref == 'refs/heads/main'
+    needs: [checks]
+    permissions:
+      contents: "read"
+      id-token: "write"
+    outputs:
+      version: ${{ steps.build-push-sign.outputs.version }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # ratchet:actions/checkout@v6
+      - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # ratchet:jdx/mise-action@v4.0.1
+      - id: go-version
+        run: echo "go-version=$(mise current go)" >> "$GITHUB_OUTPUT"
+      - name: Install cosign
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # ratchet:sigstore/cosign-installer@v4.1.2
+      - name: Verify runner image
+        run: cosign verify --certificate-identity ${{ env.BASEIMG_IDENTITY }} --certificate-oidc-issuer ${{ env.BASEIMG_ISSUER }} ${{ env.RUNNER_IMG }}
+      - uses: nais/platform-build-push-sign@df590279b21bc5978519685752f9eaddd546043c # ratchet:nais/platform-build-push-sign@main
+        id: build-push-sign
+        with:
+          name: grafana-git-sync
+          build_args: |
+            GO_VERSION=${{ steps.go-version.outputs.go-version }}
+          google_service_account: gh-grafana-git-sync
+          workload_identity_provider: ${{ secrets.NAIS_IO_WORKLOAD_IDENTITY_PROVIDER }}
+          push: ${{ github.actor != 'dependabot[bot]' }}
+      - name: Summary
+        run: echo "Image version \`${{ steps.build-push-sign.outputs.version }}\` — install with \`--set image.tag=${{ steps.build-push-sign.outputs.version }}\`" >> "$GITHUB_STEP_SUMMARY"
